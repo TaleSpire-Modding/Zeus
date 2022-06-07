@@ -1,0 +1,10 @@
+{
+    "name": "Zeus",
+    "version_number": "0.9.0",
+    "website_url": "",
+    "description": "Thunderman 2.0, Prompts to download missing asset packs at runtime",
+    "dependencies":
+	[
+        "PluginMasters-Custom_Assets_Library_Plugin-1.1.0"
+    ]
+}
