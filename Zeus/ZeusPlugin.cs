@@ -2,6 +2,7 @@
 using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
+using PluginMasters;
 using UnityEngine;
 using Zeus.Patches;
 
@@ -25,12 +26,13 @@ namespace Zeus
 
 
     [BepInPlugin(Guid, Name, Version)]
-    [BepInDependency(CustomAssetsLibrary.CustomAssetLib.Guid)]
+    [BepInDependency(CustomAssetsLoader.CustomAssetLoader.Guid)]
+    [BepInDependency(CustomAssetsLibraryPlugin.Guid)]
     public class ZeusPlugin : BaseUnityPlugin
     {
         // constants
         public const string Guid = "org.HF.plugins.Zeus";
-        public const string Version = "1.0.0.0";
+        public const string Version = "1.1.0.0";
         private const string Name = "HolloFoxes' Zeus";
 
         internal static ConfigEntry<LogLevel> LogLevel { get; set; }
@@ -70,10 +72,7 @@ namespace Zeus
 
         private void Update()
         {
-            if (LoadAssetPatch.DownloadedAssets.TryTake(out var dir))
-            {
-                CustomAssetsLibrary.Patches.AssetDbOnSetupInternalsPatch.LoadDirectory(dir);
-            }
+            
         }
     }
 }

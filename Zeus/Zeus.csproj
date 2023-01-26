@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Zeus</RootNamespace>
     <AssemblyName>Zeus</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
@@ -676,8 +676,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="CustomAssetsLibrary">
-      <HintPath>..\..\..\..\..\..\AppData\Roaming\r2modmanPlus-local\TaleSpire\profiles\CMPDev\BepInEx\plugins\PluginMasters-Custom_Assets_Library_Plugin\CustomAssetsLibrary.dll</HintPath>
+    <Reference Include="CustomAssetDTO">
+      <HintPath>..\..\ExtraAssetsLibrary\dll\Release\net48\CustomAssetDTO.dll</HintPath>
+    </Reference>
+    <Reference Include="CustomAssetsCompiler">
+      <HintPath>..\..\ExtraAssetsLibrary\dll\Release\net48\CustomAssetsCompiler.dll</HintPath>
+    </Reference>
+    <Reference Include="CustomAssetsLibraryPlugin">
+      <HintPath>..\..\ExtraAssetsLibrary\dll\Release\net48\CustomAssetsLibraryPlugin.dll</HintPath>
+    </Reference>
+    <Reference Include="CustomAssetsLoader">
+      <HintPath>..\..\ExtraAssetsLibrary\dll\Release\net48\CustomAssetsLoader.dll</HintPath>
     </Reference>
     <Reference Include="FileAccessPlugin, Version=1.3.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
