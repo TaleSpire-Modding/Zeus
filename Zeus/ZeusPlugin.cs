@@ -1,7 +1,12 @@
-﻿using System.Threading;
+﻿using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading;
 using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
+using Newtonsoft.Json;
 using PluginMasters;
 using UnityEngine;
 using Zeus.Patches;
@@ -24,20 +29,32 @@ namespace Zeus
         Yes
     }
 
-
     [BepInPlugin(Guid, Name, Version)]
     [BepInDependency(CustomAssetsLoader.CustomAssetLoader.Guid)]
     [BepInDependency(CustomAssetsLibraryPlugin.Guid)]
-    public class ZeusPlugin : BaseUnityPlugin
+    public sealed class ZeusPlugin : BaseUnityPlugin
     {
         // constants
         public const string Guid = "org.HF.plugins.Zeus";
-        public const string Version = "1.1.0.0";
+        public const string Version = "1.2.1.0";
         private const string Name = "HolloFoxes' Zeus";
+        private static readonly string dirPlugin = Paths.PluginPath;
+
 
         internal static ConfigEntry<LogLevel> LogLevel { get; set; }
         internal static ConfigEntry<AutoDownload> AutoDownloadPacks { get; set; }
         internal static Harmony harmony;
+
+        internal static Semaphore TrackedAssetsPool = new Semaphore(initialCount: 1, maximumCount: 1);
+        internal static List<string> TrackedPacks = new List<string>();
+
+        internal static Semaphore PendingAssetsPool = new Semaphore(initialCount: 1, maximumCount: 1);
+        internal static List<string> AssetsToDownload = new List<string>();
+
+        internal static Semaphore CompilingPool = new Semaphore(initialCount: 1, maximumCount: 1);
+        internal static List<string> AssetsToCompile = new List<string>();
+        
+        internal static List<string> AssetsToLoad = new List<string>();
 
         public static void DoPatching()
         {
@@ -68,11 +85,103 @@ namespace Zeus
             // non-blocking awake in event of future large downloads
             var loadThread = new Thread(LoadAssetPatch.LoadZeusDb);
             loadThread.Start();
+
+            InvokeRepeating(nameof(InvokedUpdate),1,2);
         }
 
-        private void Update()
+        private void InvokedUpdate()
         {
+            if (PendingAssetsPool.WaitOne(1))
+            {
+                if (AssetsToDownload.Any())
+                    new Thread(DownloadPacks).Start();
+                PendingAssetsPool.Release();
+            }
+
+            if (CompilingPool.WaitOne(1))
+            {
+                if (AssetsToCompile.Any())
+                    CompilingPacks();
+                CompilingPool.Release();
+            }
+
+            if (AssetsToLoad.Any())
+                    LoadPacks();
+        }
+
+        private static void DownloadPacks()
+        {
+            PendingAssetsPool.WaitOne();
+
+            var dir = new List<string>();
+
+            foreach (var assetPackId in AssetsToDownload)
+            {
+                
+                var requestUri = "https://talespire.thunderstore.io/api/v1/package/" + assetPackId;
+                var httpWebRequest = (HttpWebRequest)WebRequest.Create(requestUri);
+                httpWebRequest.Method = WebRequestMethods.Http.Get;
+                httpWebRequest.Accept = "application/json";
+
+                var response = (HttpWebResponse)httpWebRequest.GetResponse();
+                string content;
+                using (var sr = new StreamReader(response.GetResponseStream()))
+                {
+                    content = sr.ReadToEnd();
+                }
+                
+                var package = JsonConvert.DeserializeObject<Package>(content);
+
+                var modManComd = $"ror2mm://v1/install/talespire.thunderstore.io/{package.owner}/{package.name}/{package.versions[0].version_number}/";
+                System.Diagnostics.Process.Start(modManComd)?.WaitForExit();
+                var p = Path.Combine(dirPlugin, $"{package.owner}-{package.name}");
+                if (!dir.Contains(p))
+                    dir.Add(p);
+            }
+            AssetsToDownload.Clear();
+            PendingAssetsPool.Release();
+
+            CompilingPool.WaitOne();
+            AssetsToCompile.AddRange(dir.Where(d => !AssetsToCompile.Contains(d)));
+            CompilingPool.Release();
+        }
+
+        private static void CompilingPacks()
+        {
+            // never rebuild
+            var om = CustomAssetsLibraryPlugin._self.operationMode.Value;
+            CustomAssetsLibraryPlugin._self.operationMode.Value = CustomAssetsLibraryPlugin.OperationMode.rebuildNever;
             
+            // build
+            CustomAssetsLibraryPlugin._self.RegisterAssets();
+            
+            // revert
+            CustomAssetsLibraryPlugin._self.operationMode.Value = om;
+
+            AssetsToLoad.AddRange(AssetsToCompile.Where(c => !AssetsToLoad.Contains(c)));
+            AssetsToCompile.Clear();
+        }
+
+        private static void LoadPacks()
+        {
+            foreach (var d in AssetsToLoad.Where(d => File.Exists(Path.Combine(d, "index"))))
+            {
+                CustomAssetsLibrary.Patches.AssetLoadManagerOnInstanceSetupPatch.LoadDirectory(d);
+            }
+            AssetsToLoad.Clear();
+
+            var indexLoadedCreatures = new List<CreatureBoardAsset>();
+
+            foreach (var problem in LoadAssetPatch.ProblemCreatures)
+            {
+                if (!problem.TryGetActiveMorph(out var c) ||
+                    !AssetDb.TryGetIndexData(problem.BoardAssetId, out var indexData)) continue;
+                c.OnIndexLoaded(indexData);
+                if (!indexLoadedCreatures.Contains(problem))
+                    indexLoadedCreatures.Add(problem);
+            }
+
+            LoadAssetPatch.ProblemCreatures.RemoveAll(t => indexLoadedCreatures.Contains(t));
         }
     }
 }

@@ -1,10 +1,10 @@
 {
     "name": "Zeus",
-    "version_number": "0.9.0",
-    "website_url": "",
-    "description": "Thunderman 2.0, Prompts to download missing asset packs at runtime",
-    "dependencies":
-	[
-        "PluginMasters-Custom_Assets_Library_Plugin-1.1.0"
+    "version_number": "1.3.0",
+    "website_url": "https://github.com/TaleSpire-Modding/Zeus",
+    "description": "Zeus is the successor of Thunderman. This plugin allows minis to be installed from thunderstore midgame.",
+    "dependencies": [
+        "bbepisTaleSpire-BepInExPack-5.4.10",
+	"PluginMasters-Custom_Assets_Library_Plugin-1.3.0"
     ]
 }

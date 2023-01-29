@@ -20,7 +20,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+Shoutouts
 Shoutout to my Patreons on https://www.patreon.com/HolloFox recognising your
-mighty contribution to my caffeine addiction:
+mighty contribution to my caffeine addiciton:
 - John Fuller
 - Tales Tavern - MadWizard

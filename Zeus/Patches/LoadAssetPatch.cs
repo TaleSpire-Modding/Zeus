@@ -5,7 +5,7 @@ using System.Net;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine.EventSystems;
-using PluginMasters;
+using System.Threading;
 
 
 // ReSharper disable once CheckNamespace
@@ -29,6 +29,8 @@ namespace Zeus.Patches
         internal static Dictionary<string, string> ZeusDb;
 
         internal static Dictionary<string,Package> loadingAssetPacks = new Dictionary<string, Package>();
+
+        internal static List<CreatureBoardAsset> ProblemCreatures = new List<CreatureBoardAsset>();
 
         internal static void LoadZeusDb()
         {
@@ -59,7 +61,7 @@ namespace Zeus.Patches
                         "Do you want to download the missing pack?"
                         , "Download Pack", () =>
                         {
-                            LoadPack(assetPackId);
+                            new Thread(() => LoadPack(assetPackId)).Start();
                             ZeusPlugin.AutoDownloadPacks.Value = AutoDownload.Yes;
                         }, "Not Now", () =>
                         {
@@ -69,43 +71,34 @@ namespace Zeus.Patches
                     break;
                 case AutoDownload.Yes:
                 {
-                    LoadPack(assetPackId);
+                    new Thread(() => LoadPack(assetPackId)).Start();
                     break;
                 }
+                case AutoDownload.No:
+                    break;
+                default:
+                    Debug.Log("No idea wtf you were doing but okay...");
+                    ZeusPlugin.AutoDownloadPacks.Value = AutoDownload.Null;
+                    break;
             }
         }
-        
 
-        private static string dirPlugin = BepInEx.Paths.PluginPath;
-
-        static void LoadPack(string _assetPackId)
+        /// <summary>
+        /// Pushing the asset pack loading onto a different non-main thread 
+        /// </summary>
+        /// <param name="assetPackId"></param>
+        private static void LoadPack(string assetPackId)
         {
-            var assetPackId = _assetPackId;
-            var requestUri = "https://talespire.thunderstore.io/api/v1/package/" + assetPackId;
-            var httpWebRequest = (HttpWebRequest)WebRequest.Create(requestUri);
-            httpWebRequest.Method = WebRequestMethods.Http.Get;
-            httpWebRequest.Accept = "application/json";
-
-            var response = (HttpWebResponse)httpWebRequest.GetResponse();
-            string content;
-            using (var sr = new StreamReader(response.GetResponseStream()))
+            ZeusPlugin.TrackedAssetsPool.WaitOne();
+            if (!ZeusPlugin.TrackedPacks.Contains(assetPackId))
             {
-                content = sr.ReadToEnd();
+                ZeusPlugin.TrackedPacks.Add(assetPackId);
+                ZeusPlugin.PendingAssetsPool.WaitOne();
+                if (!ZeusPlugin.AssetsToDownload.Contains(assetPackId))
+                    ZeusPlugin.AssetsToDownload.Add(assetPackId);
+                ZeusPlugin.PendingAssetsPool.Release();
             }
-
-            loadingAssetPacks[assetPackId] = JsonConvert.DeserializeObject<Package>(content);
-            var package = loadingAssetPacks[assetPackId];
-
-            var modManComd = $"ror2mm://v1/install/talespire.thunderstore.io/{package.owner}/{package.name}/{package.versions[0].version_number}/";
-            System.Diagnostics.Process.Start(modManComd)?.WaitForExit();
-            
-            var dir = Path.Combine(dirPlugin, $"{package.owner}-{package.name}");
-            
-            CustomAssetsLibraryPlugin._self.RegisterAssets();
-            if (File.Exists(Path.Combine(dir, "index")))
-            {
-                CustomAssetsLibrary.Patches.AssetLoadManagerOnInstanceSetupPatch.LoadDirectory(dir);
-            }
+            ZeusPlugin.TrackedAssetsPool.Release();
         }
 
         static bool Prefix(ref CreatureBoardAsset __instance)
@@ -113,11 +106,18 @@ namespace Zeus.Patches
             var id = __instance.BoardAssetId;
 
             var noCreatureId = !AssetDb.Creatures.ContainsKey(id);
+
+            if (!noCreatureId) return true;
+            
             var zeusHadId = ZeusDb.ContainsKey(id.ToString());
-            if (!noCreatureId || !zeusHadId) return true;
+            
+            if (!zeusHadId) return true;
             
             var assetPackId = ZeusDb[id.ToString()];
             Debug.Log($"We found it in this asset pack: {assetPackId}");
+
+            if (!ProblemCreatures.Contains(__instance))
+                ProblemCreatures.Add(__instance);
 
             if (!loadingAssetPacks.ContainsKey(assetPackId))
             {
