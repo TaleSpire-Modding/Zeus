@@ -94,7 +94,8 @@ namespace Zeus.Patches
             {
                 ZeusPlugin.TrackedPacks.Add(assetPackId);
                 ZeusPlugin.PendingAssetsPool.WaitOne();
-                ZeusPlugin.AssetsToDownload.Add(assetPackId);
+                if (!ZeusPlugin.AssetsToDownload.Contains(assetPackId))
+                    ZeusPlugin.AssetsToDownload.Add(assetPackId);
                 ZeusPlugin.PendingAssetsPool.Release();
             }
             ZeusPlugin.TrackedAssetsPool.Release();
@@ -115,7 +116,8 @@ namespace Zeus.Patches
             var assetPackId = ZeusDb[id.ToString()];
             Debug.Log($"We found it in this asset pack: {assetPackId}");
 
-            ProblemCreatures.Add(__instance);
+            if (!ProblemCreatures.Contains(__instance))
+                ProblemCreatures.Add(__instance);
 
             if (!loadingAssetPacks.ContainsKey(assetPackId))
             {

@@ -134,14 +134,15 @@ namespace Zeus
 
                 var modManComd = $"ror2mm://v1/install/talespire.thunderstore.io/{package.owner}/{package.name}/{package.versions[0].version_number}/";
                 System.Diagnostics.Process.Start(modManComd)?.WaitForExit();
-                
-                dir.Add( Path.Combine(dirPlugin, $"{package.owner}-{package.name}"));
+                var p = Path.Combine(dirPlugin, $"{package.owner}-{package.name}");
+                if (!dir.Contains(p))
+                    dir.Add(p);
             }
             AssetsToDownload.Clear();
             PendingAssetsPool.Release();
 
             CompilingPool.WaitOne();
-            AssetsToCompile.AddRange(dir);
+            AssetsToCompile.AddRange(dir.Where(d => !AssetsToCompile.Contains(d)));
             CompilingPool.Release();
         }
 
@@ -157,7 +158,7 @@ namespace Zeus
             // revert
             CustomAssetsLibraryPlugin._self.operationMode.Value = om;
 
-            AssetsToLoad.AddRange(AssetsToCompile.ToList());
+            AssetsToLoad.AddRange(AssetsToCompile.Where(c => !AssetsToLoad.Contains(c)));
             AssetsToCompile.Clear();
         }
 
@@ -176,7 +177,8 @@ namespace Zeus
                 if (!problem.TryGetActiveMorph(out var c) ||
                     !AssetDb.TryGetIndexData(problem.BoardAssetId, out var indexData)) continue;
                 c.OnIndexLoaded(indexData);
-                indexLoadedCreatures.Add(problem);
+                if (!indexLoadedCreatures.Contains(problem))
+                    indexLoadedCreatures.Add(problem);
             }
 
             LoadAssetPatch.ProblemCreatures.RemoveAll(t => indexLoadedCreatures.Contains(t));
