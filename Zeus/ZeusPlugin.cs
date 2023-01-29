@@ -2,11 +2,9 @@
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection;
 using System.Threading;
 using BepInEx;
 using BepInEx.Configuration;
-using BepInEx.Logging;
 using HarmonyLib;
 using Newtonsoft.Json;
 using PluginMasters;
@@ -38,7 +36,7 @@ namespace Zeus
     {
         // constants
         public const string Guid = "org.HF.plugins.Zeus";
-        public const string Version = "1.2.0.0";
+        public const string Version = "1.2.1.0";
         private const string Name = "HolloFoxes' Zeus";
         private static readonly string dirPlugin = Paths.PluginPath;
 
@@ -149,7 +147,16 @@ namespace Zeus
 
         private static void CompilingPacks()
         {
+            // never rebuild
+            var om = CustomAssetsLibraryPlugin._self.operationMode.Value;
+            CustomAssetsLibraryPlugin._self.operationMode.Value = CustomAssetsLibraryPlugin.OperationMode.rebuildNever;
+            
+            // build
             CustomAssetsLibraryPlugin._self.RegisterAssets();
+            
+            // revert
+            CustomAssetsLibraryPlugin._self.operationMode.Value = om;
+
             AssetsToLoad.AddRange(AssetsToCompile.ToList());
             AssetsToCompile.Clear();
         }
