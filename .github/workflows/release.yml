@@ -29,7 +29,7 @@ jobs:
           echo "NAME=${name}" >> $env:GITHUB_OUTPUT
           echo "DESCRIPTION=${description}" >> $env:GITHUB_OUTPUT
           echo "PROJECT=Zeus.csproj" >> $env:GITHUB_OUTPUT
-          echo "PLUGIN=Zeus.cs" >> $env:GITHUB_OUTPUT
+          echo "PLUGIN=ZeusPlugin.cs" >> $env:GITHUB_OUTPUT
           $dependencies = ""
           foreach ($dep in $json.dependencies){
             $first,$second,$rest = $dep -split '-',3
